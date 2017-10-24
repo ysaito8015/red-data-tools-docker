@@ -6,27 +6,43 @@ MAINTAINER Yusuke Saito
 
 # https://packages.red-data-tools.org/ provides packages. You need to enable the package repository before you install packages.
 RUN apt-get update \
-    && apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
-    && apt-get install -y \
+    && apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
+
+RUN apt-get install -y \
     apt-transport-https \
     lsb-release \
-    ansible \
-    && cat <<APT_LINE | \
-       tee /etc/apt/sources.list.d/red-data-tools.list \
-       deb https://packages.red-data-tools.org/ubuntu/ $(lsb_release --codename --short) universe \
-       deb-src https://packages.red-data-tools.org/ubuntu/ $(lsb_release --codename --short) universe \
-       APT_LINE \
-    && apt update --allow-insecure-repositories || apt update \
-    && apt install -y --allow-unauthenticated red-data-tools-keyring \
-    && apt update \
+    build-essential \
+    curl \
+    g++ \
+    make \
+    libreadline6-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libyaml-dev \
+    libxml2-dev \
+    libxslt-dev \
+    vim
+
+# Add souces.list.d/red-data-tools.list
+RUN echo "deb https://packages.red-data-tools.org/ubuntu/ $(lsb_release --codename --short) universe\ndeb-src https://packages.red-data-tools.org/ubuntu/ $(lsb_release --codename --short) universe"  >> /etc/apt/sources.list.d/red-data-tools.list \
+    && apt-get update --allow-insecure-repositories || apt-get update \
+    && apt-get install -y --allow-unauthenticated red-data-tools-keyring
+
+RUN apt-get install -y --allow-unauthenticated \
 # Install Apache Arrow C++
-    && apt install -y libarrow-dev \ 
+    libarrow-dev \
 # Install Apache Arrow GLib (C API)
-    barrow-glib-dev \
+    libarrow-glib-dev \
 # Apache Parquet C++
     libparquet-dev \
 # Parquet GLib
-    libparquet-glib-dev \
-#For packages.red-data-tools.org administrator
+    libparquet-glib-dev
 
-#RUN  rake deploy
+# Install Ruby 2.4.2
+RUN mkdir /usr/local/src/ruby && curl -L https://cache.ruby-lang.org/pub/ruby/2.4/ruby-2.4.2.tar.gz | tar -z -x -C /usr/local/src/ruby --strip-components=1 -f -\
+    && cd /usr/local/src/ruby && ./configure --prefix=/usr/local && make && make install \
+    && gem update --system \
+    && gem update \
+    && gem install red-arrow
+
+CMD /bin/bash
